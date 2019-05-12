@@ -84,10 +84,16 @@ class VisualShaderEditor : public VBoxContainer {
 	LineEdit *node_filter;
 	RichTextLabel *node_desc;
 
+	PopupPanel *add_port_dialog;
+	LineEdit *add_port_name_box;
+	OptionButton *add_port_type_box;
+	Timer *build_timer;
+
 	void _tools_menu_option(int p_idx);
 	void _show_members_dialog(bool at_mouse_pos);
 
 	void _update_graph();
+	void _update_connections();
 
 	struct AddOption {
 		String name;
@@ -128,6 +134,7 @@ class VisualShaderEditor : public VBoxContainer {
 	};
 
 	Vector<AddOption> add_options;
+	List<String> keyword_list;
 
 	void _draw_color_over_button(Object *obj, Color p_color);
 
@@ -168,8 +175,27 @@ class VisualShaderEditor : public VBoxContainer {
 
 	void _input_select_item(Ref<VisualShaderNodeInput> input, String name);
 
+	void _create_port();
+
+	void _add_input_port(int p_node, int p_port, int p_type, const String &p_name);
+	void _remove_input_port(int p_node, int p_port);
+
+	void _add_output_port(int p_node, int p_port, int p_type, const String &p_name);
+	void _remove_output_port(int p_node, int p_port);
+
+	void _rebuild();
+	void _set_expression(int p_node);
+	void _set_expression_focus(int p_node);
+	void _free_expression_focus(int p_node);
+
+	void _set_node_size(int p_type, int p_node, const Size2 &p_size);
+
+	void _show_add_port_menu(int p_node, bool p_output);
+	void _node_resized(const Vector2 &p_new_size, const Vector2 &p_old_size, int p_type, int p_node);
+
 	void _preview_select_port(int p_node, int p_port);
 	void _graph_gui_input(const Ref<InputEvent> p_event);
+	void _add_port_gui_input(const Ref<InputEvent> p_event);
 
 	void _member_filter_changed(const String &p_text);
 	void _sbox_input(const Ref<InputEvent> &p_ie);
