@@ -32,6 +32,8 @@
 #define VISUAL_SHADER_H
 
 #include "core/string_builder.h"
+#include "scene/gui/button.h"
+#include "scene/gui/text_edit.h"
 #include "scene/resources/shader.h"
 
 class VisualShaderNodeUniform;
@@ -61,8 +63,20 @@ public:
 
 private:
 	struct Node {
+		// FOR ALL
+
 		Ref<VisualShaderNode> node;
 		Vector2 position;
+
+		// FOR GROUPS
+
+		Vector2 size;
+		String inputs;
+		String outputs;
+
+		// FOR EXPRESSIONS
+
+		String expression;
 	};
 
 	struct Graph {
@@ -121,8 +135,21 @@ public:
 
 	void add_node(Type p_type, const Ref<VisualShaderNode> &p_node, const Vector2 &p_position, int p_id);
 	void set_node_position(Type p_type, int p_id, const Vector2 &p_position);
+	void set_node_size(Type p_type, int p_id, const Vector2 &p_size);
+	void set_node_inputs(Type p_type, int p_id, const String &p_expression);
+	void set_node_outputs(Type p_type, int p_id, const String &p_expression);
+	void set_node_expression(Type p_type, int p_id, const String &p_expression);
+
+	void add_input_port(Type p_type, int p_node, int p_port, int p_port_type, const String &p_name);
+	void add_output_port(Type p_type, int p_node, int p_port, int p_port_type, const String &p_name);
+	void remove_input_port(Type p_type, int p_node, int p_port);
+	void remove_output_port(Type p_type, int p_node, int p_port);
 
 	Vector2 get_node_position(Type p_type, int p_id) const;
+	Vector2 get_node_size(Type p_type, int p_id) const;
+	String get_node_inputs(Type p_type, int p_id) const;
+	String get_node_outputs(Type p_type, int p_id) const;
+	String get_node_expression(Type p_type, int p_id) const;
 	Ref<VisualShaderNode> get_node(Type p_type, int p_id) const;
 
 	Vector<int> get_node_list(Type p_type) const;
@@ -134,8 +161,12 @@ public:
 	bool is_node_connection(Type p_type, int p_from_node, int p_from_port, int p_to_node, int p_to_port) const;
 	bool can_connect_nodes(Type p_type, int p_from_node, int p_from_port, int p_to_node, int p_to_port) const;
 	Error connect_nodes(Type p_type, int p_from_node, int p_from_port, int p_to_node, int p_to_port);
+	void connect_nodes_deferred(Type p_type, int p_from_node, int p_from_port, int p_to_node, int p_to_port);
 	void disconnect_nodes(Type p_type, int p_from_node, int p_from_port, int p_to_node, int p_to_port);
+	void disconnect_nodes_deferred(Type p_type, int p_from_node, int p_from_port, int p_to_node, int p_to_port);
+	void add_connection_to_buffer(Type p_type, int p_from_node, int p_from_port, int p_to_node, int p_to_port);
 
+	void rebuild();
 	void get_node_connections(Type p_type, List<Connection> *r_connections) const;
 
 	void set_mode(Mode p_mode);
@@ -313,5 +344,93 @@ public:
 
 	VisualShaderNodeUniform();
 };
+
+class VisualShaderNodeGroupBase : public VisualShaderNode {
+	GDCLASS(VisualShaderNodeGroupBase, VisualShaderNode)
+protected:
+	Vector2 size;
+
+	struct Port {
+		PortType type;
+		String name;
+		Variant defval;
+	};
+
+	Map<int, Port> input_ports;
+	Map<int, Port> output_ports;
+	Map<int, Control *> controls;
+
+protected:
+	static void _bind_methods();
+
+public:
+	virtual String get_caption() const;
+
+	void set_size(const Vector2 &p_size);
+	Vector2 get_size() const;
+
+	void add_input_port(int p_id, int p_type, const String &p_name);
+	void remove_input_port(int p_id);
+	virtual int get_input_port_count() const;
+	bool has_input_port(int p_id) const;
+	void clear_input_ports();
+
+	void add_output_port(int p_id, int p_type, const String &p_name);
+	void remove_output_port(int p_id);
+	virtual int get_output_port_count() const;
+	bool has_output_port(int p_id) const;
+	void clear_output_ports();
+
+	void set_input_port_type(int p_id, int p_type);
+	virtual PortType get_input_port_type(int p_id) const;
+	void set_input_port_name(int p_id, const String &p_name);
+	virtual String get_input_port_name(int p_id) const;
+
+	void set_output_port_type(int p_id, int p_type);
+	virtual PortType get_output_port_type(int p_id) const;
+	void set_output_port_name(int p_id, const String &p_name);
+	virtual String get_output_port_name(int p_id) const;
+
+	int get_free_input_port_id() const;
+	int get_free_output_port_id() const;
+
+	void set_control(Control *p_control, int p_index);
+	Control *get_control(int p_index);
+
+	virtual String generate_code(Shader::Mode p_mode, VisualShader::Type p_type, int p_id, const String *p_input_vars, const String *p_output_vars, bool p_for_preview = false) const;
+
+	VisualShaderNodeGroupBase();
+};
+
+class VisualShaderNodeExpression : public VisualShaderNodeGroupBase {
+	GDCLASS(VisualShaderNodeExpression, VisualShaderNodeGroupBase)
+public:
+	enum ControlIndex {
+		CONTROL_ADD_INPUT_PORT_BUTTON,
+		CONTROL_ADD_OUTPUT_PORT_BUTTON,
+		CONTROL_EXPRESSION_BOX,
+		CONTROL_MAX
+	};
+
+private:
+	String expression;
+
+protected:
+	static void _bind_methods();
+
+public:
+	virtual String get_caption() const;
+
+	void set_expression(const String &p_expression);
+	String get_expression() const;
+
+	void build();
+
+	virtual String generate_code(Shader::Mode p_mode, VisualShader::Type p_type, int p_id, const String *p_input_vars, const String *p_output_vars, bool p_for_preview = false) const;
+
+	VisualShaderNodeExpression();
+};
+
+VARIANT_ENUM_CAST(VisualShaderNodeExpression::ControlIndex)
 
 #endif // VISUAL_SHADER_H
